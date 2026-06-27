@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дом, которого нет</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #story-text {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            min-height: 150px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            background-color: #2c2c2c;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 15px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .choice-btn:hover {
+            background-color: #3c3c3c;
+        }
+
+        .choice-btn:active {
+            transform: scale(0.99);
+        }
+
+        .fade-in {
+            animation: fadeIn 1s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="story-text" class="fade-in"></div>
+        <div id="choices-container"></div>
+    </div>
+
+    <script>
+        // Структура сюжета (квеста)
+        const story = {
+            start: {
+                text: "Вы стоите перед старым, заброшенным домом. Окна забиты досками, а дверь приоткрыта, скрипя на ветру. Внутри темнота. Что-то зовет вас туда, но чувство тревоги не отпускает.",
+                choices: [
+                    { text: "Войти в дом", next: "enter_house" },
+                    { text: "Обойти вокруг", next: "walk_around" },
+                    { text: "Уйти прочь", next: "leave" }
+                ]
+            },
+            enter_house: {
+                text: "Вы делаете шаг внутрь. Запах пыли и сырости бьет в нос. Дверь за вами внезапно захлопывается. Впереди видна лестница на второй этаж и дверь, ведущая в подвал.",
+                choices: [
+                    { text: "Подняться наверх", next: "upstairs" },
+                    { text: "Спуститься в подвал", next: "basement" },
+                    { text: "Попытаться открыть дверь", next: "try_door" }
+                ]
+            },
+            walk_around: {
+                text: "Вы обходите дом. Задний двор зарос высокой травой. Внезапно вы замечаете странный символ, нацарапанный на стене. Он кажется знакомым...",
+                choices: [
+                    { text: "Изучить символ", next: "study_symbol" },
+                    { text: "Вернуться к парадному входу", next: "start" }
+                ]
+            },
+            leave: {
+                text: "Вы решаете, что это плохая идея, и уходите. Но каждую ночь после этого вам снится этот дом, и вы понимаете, что однажды вам придется вернуться. (Конец)",
+                choices: [
+                    { text: "Начать заново", next: "start" }
+                ]
+            },
+            upstairs: {
+                text: "На втором этаже вы находите старую детскую комнату. На полу лежит сломанная кукла, а на стене нацарапано 'Я ждала тебя'.",
+                choices: [
+                    { text: "Подойти к кукле", next: "doll" },
+                    { text: "Бежать назад", next: "enter_house" }
+                ]
+            },
+            basement: {
+                text: "Спуск в подвал дается тяжело — ступени прогнили. Внизу вы находите зеркало, которое не отражает вас. (Демо-версия квеста завершена)",
+                choices: [
+                    { text: "Начать заново", next: "start" }
+                ]
+            },
+            try_door: {
+                text: "Дверь заперта наглухо. Похоже, пути назад больше нет. (Демо-версия квеста завершена)",
+                choices: [
+                    { text: "Начать заново", next: "start" }
+                ]
+            },
+            study_symbol: {
+                text: "Как только вы касаетесь символа, ваше сознание мутнеет. Вы просыпаетесь внутри дома... (Демо-версия квеста завершена)",
+                choices: [
+                    { text: "Начать заново", next: "start" }
+                ]
+            },
+            doll: {
+                text: "Кукла внезапно поворачивает голову и смотрит на вас пустыми глазницами. Вы чувствуете, как холод проникает в самое сердце. (Демо-версия квеста завершена)",
+                choices: [
+                    { text: "Начать заново", next: "start" }
+                ]
+            }
+        };
+
+        // DOM элементы
+        const storyTextElement = document.getElementById('story-text');
+        const choicesContainerElement = document.getElementById('choices-container');
+
+        // Состояние
+        let currentNode = 'start';
+
+        // Функция обновления сцены
+        function renderScene(nodeId) {
+            const node = story[nodeId];
+            if (!node) {
+                console.error(`Node ${nodeId} not found in story object.`);
+                return;
+            }
+
+            currentNode = nodeId;
+
+            // Обновляем текст с анимацией
+            storyTextElement.classList.remove('fade-in');
+            void storyTextElement.offsetWidth; // Trigger reflow
+            storyTextElement.innerText = node.text;
+            storyTextElement.classList.add('fade-in');
+
+            // Очищаем старые кнопки выбора
+            choicesContainerElement.innerHTML = '';
+
+            // Добавляем новые кнопки выбора
+            node.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.innerText = choice.text;
+                button.classList.add('choice-btn');
+                button.onclick = () => renderScene(choice.next);
+                choicesContainerElement.appendChild(button);
+            });
+        }
+
+        // Запуск игры
+        renderScene('start');
+    </script>
+</body>
+</html>
